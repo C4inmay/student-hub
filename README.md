@@ -1,73 +1,79 @@
-# Welcome to your Lovable project
+# Student Hub
 
-## Project info
+Student Hub is a Vite + React + TypeScript application that helps administrators and students track academic performance, rankings, achievements, and Supabase-backed profiles. It includes dashboards, analytics, ranking methodologies (TOPSIS/WSM/SAW/AHP), and CRUD flows for admins to manage student data.
 
-**URL**: https://lovable.dev/projects/d21f70a9-fa00-483a-80f1-fe88ee55f610
+## Tech stack
 
-## How can I edit this code?
+- Vite + React (TypeScript)
+- Supabase (auth, Postgres, Storage)
+- shadcn/ui + Tailwind CSS
+- React Router, React Query, Zod, React Hook Form
 
-There are several ways of editing your application.
+## Getting started
 
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/d21f70a9-fa00-483a-80f1-fe88ee55f610) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+```bash
+git clone <REPO_URL>
+cd student-hub
+npm install
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+> Requires Node.js 18+. Using [`nvm`](https://github.com/nvm-sh/nvm) is recommended for managing versions.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Available scripts
 
-**Use GitHub Codespaces**
+- `npm run dev` – start the Vite dev server
+- `npm run build` – create a production build
+- `npm run build:dev` – build using development mode (useful for Supabase Edge previews)
+- `npm run preview` – preview the production bundle
+- `npm run lint` – run ESLint on the project
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Environment variables
 
-## What technologies are used for this project?
+Supabase credentials are required for authentication, storage, and database calls.
 
-This project is built with:
+```bash
+cp .env.example .env
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+# edit .env
+VITE_SUPABASE_URL=your-project-url
+VITE_SUPABASE_ANON_KEY=your-anon-key
+```
 
-## How can I deploy this project?
+Restart the dev server whenever environment variables change.
 
-Simply open [Lovable](https://lovable.dev/projects/d21f70a9-fa00-483a-80f1-fe88ee55f610) and click on Share -> Publish.
+## Database & storage setup
 
-## Can I connect a custom domain to my Lovable project?
+1. Run `supabase/schema.sql` in the Supabase SQL editor (or via `psql`) to create the tables, enums, and constraints referenced by the app.
+2. Apply `supabase/seed_students.sql` to load canonical demo data plus storage bucket policies for profile pictures.
+3. Ensure a public `profile_pictures` storage bucket exists; the seed script includes an idempotent `insert ... on conflict do nothing` for convenience.
 
-Yes, you can!
+```bash
+psql "$SUPABASE_DB_URL" -f supabase/schema.sql
+psql "$SUPABASE_DB_URL" -f supabase/seed_students.sql
+```
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## Demo accounts
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Two sample accounts are available for quick testing:
+
+- Admin — `admin@gmail.com` / `admin@123`
+- Student — `Chinmay@gmail.com` / `student@123`
+
+Use the Register tab on the login page to add additional test users.
+
+## Project structure highlights
+
+- `src/pages` – routed views (dashboards, rankings, analytics, admin tools)
+- `src/components` – shared UI (Navbar plus shadcn-generated primitives)
+- `src/services` – Supabase data access (students, profiles, storage, logs, etc.)
+- `src/lib/rankingMethods.ts` – client-side ranking algorithms + helpers
+- `supabase/` – SQL schema & seed scripts for Postgres + Storage setup
+
+## Contributing
+
+1. Create a feature branch.
+2. Make changes and ensure `npm run lint` passes.
+3. Open a pull request describing the updates and any Supabase SQL steps applied.
+
+Feel free to tailor the copy above to match your deployment tooling or CI/CD workflow.

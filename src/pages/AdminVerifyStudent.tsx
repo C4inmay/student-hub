@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { StudentProfile } from "@/types/auth";
 import { CheckCircle, XCircle, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { getProfileById, approveProfile, rejectProfile as rejectProfileRequest } from "@/services/studentProfiles";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,58 +24,64 @@ import {
 
 const AdminVerifyStudent = () => {
   const { id } = useParams<{ id: string }>();
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
+  const [isFetching, setIsFetching] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
+    if (isLoading) {
+      return;
+    }
+
     if (!user || user.role !== "admin") {
       navigate("/login");
       return;
     }
 
-    const storedProfiles = localStorage.getItem("studentProfiles");
-    if (storedProfiles) {
-      const profiles: StudentProfile[] = JSON.parse(storedProfiles);
-      const found = profiles.find(p => p.id === id);
-      if (found) {
-        setProfile(found);
-      } else {
-        navigate("/admin/dashboard");
-      }
-    }
-  }, [id, user, navigate]);
+    const fetchProfile = async () => {
+      if (!id) return;
 
-  const handleApprove = () => {
+      try {
+        setIsFetching(true);
+        const found = await getProfileById(id);
+        setProfile(found);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Unable to load profile";
+        toast({ title: "Failed to load profile", description: message, variant: "destructive" });
+        navigate("/admin/dashboard");
+      } finally {
+        setIsFetching(false);
+      }
+    };
+
+    fetchProfile();
+  }, [id, user, navigate, isLoading, toast]);
+
+  const handleApprove = async () => {
     if (!profile) return;
 
-    const storedProfiles = localStorage.getItem("studentProfiles");
-    if (storedProfiles) {
-      const profiles: StudentProfile[] = JSON.parse(storedProfiles);
-      const index = profiles.findIndex(p => p.id === profile.id);
-      
-      if (index !== -1) {
-        profiles[index] = {
-          ...profiles[index],
-          verificationStatus: "approved",
-          reviewedAt: new Date().toISOString(),
-        };
-        localStorage.setItem("studentProfiles", JSON.stringify(profiles));
-        
-        toast({
-          title: "Student Approved",
-          description: `${profile.name}'s profile has been approved.`,
-        });
-        
-        navigate("/admin/dashboard");
-      }
+    try {
+      setIsSubmitting(true);
+      await approveProfile(profile.id);
+      toast({
+        title: "Student Approved",
+        description: `${profile.name}'s profile has been approved.`,
+      });
+      navigate("/admin/dashboard");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to approve profile";
+      toast({ title: "Approval failed", description: message, variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleReject = () => {
+  const handleReject = async () => {
     if (!profile || !rejectionReason.trim()) {
       toast({
         title: "Error",
@@ -84,32 +91,48 @@ const AdminVerifyStudent = () => {
       return;
     }
 
-    const storedProfiles = localStorage.getItem("studentProfiles");
-    if (storedProfiles) {
-      const profiles: StudentProfile[] = JSON.parse(storedProfiles);
-      const index = profiles.findIndex(p => p.id === profile.id);
-      
-      if (index !== -1) {
-        profiles[index] = {
-          ...profiles[index],
-          verificationStatus: "rejected",
-          rejectionReason: rejectionReason,
-          reviewedAt: new Date().toISOString(),
-        };
-        localStorage.setItem("studentProfiles", JSON.stringify(profiles));
-        
-        toast({
-          title: "Student Rejected",
-          description: `${profile.name}'s profile has been rejected.`,
-        });
-        
-        navigate("/admin/dashboard");
-      }
+    try {
+      setIsSubmitting(true);
+      await rejectProfileRequest(profile.id, rejectionReason.trim());
+      toast({
+        title: "Student Rejected",
+        description: `${profile.name}'s profile has been rejected.`,
+      });
+      navigate("/admin/dashboard");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to reject profile";
+      toast({ title: "Rejection failed", description: message, variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  if (!profile) {
-    return null;
+  const renderListCard = (
+    title: string,
+    items: Array<Record<string, string>>,
+    renderItem: (item: Record<string, string>, index: number) => React.ReactNode
+  ) => (
+    <Card className="p-6">
+      <h3 className="text-lg font-semibold text-foreground mb-4">{title}</h3>
+      <div className="space-y-4">
+        {items.map((item, index) => (
+          <div key={index} className="rounded-lg border border-border p-4">
+            {renderItem(item, index)}
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+
+  if (isLoading || isFetching || !profile) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="container mx-auto px-4 py-24 text-center text-muted-foreground">
+          Loading student profile...
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -190,8 +213,73 @@ const AdminVerifyStudent = () => {
               </div>
             )}
 
+            <div className="space-y-6">
+              {profile.skills.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground mb-3">Skills</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {profile.skills.map((skill, index) => (
+                      <Badge key={index} variant="secondary">
+                        {skill}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-4">
+                {profile.certificates.length > 0 &&
+                  renderListCard("Certificates", profile.certificates as Array<Record<string, string>>, (item) => (
+                    <div>
+                      <p className="font-semibold text-foreground">{item.title}</p>
+                      <p className="text-sm text-muted-foreground">{item.category} · {item.year}</p>
+                      <a
+                        href={item.proofLink}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-sm text-primary underline"
+                      >
+                        Proof Link
+                      </a>
+                    </div>
+                  ))}
+
+                {profile.hackathons.length > 0 &&
+                  renderListCard("Hackathons", profile.hackathons as Array<Record<string, string>>, (item) => (
+                    <div>
+                      <p className="font-semibold text-foreground">{item.eventName}</p>
+                      <p className="text-sm text-muted-foreground">{item.position} · {item.year}</p>
+                    </div>
+                  ))}
+
+                {profile.sports.length > 0 &&
+                  renderListCard("Sports Achievements", profile.sports as Array<Record<string, string>>, (item) => (
+                    <div>
+                      <p className="font-semibold text-foreground">{item.sport}</p>
+                      <p className="text-sm text-muted-foreground">{item.level} · {item.position}</p>
+                    </div>
+                  ))}
+
+                {profile.internships.length > 0 &&
+                  renderListCard("Internships", profile.internships as Array<Record<string, string>>, (item) => (
+                    <div>
+                      <p className="font-semibold text-foreground">{item.company}</p>
+                      <p className="text-sm text-muted-foreground">{item.role} · {item.duration}</p>
+                    </div>
+                  ))}
+
+                {profile.extracurricular.length > 0 &&
+                  renderListCard("Extracurricular Activities", profile.extracurricular as Array<Record<string, string>>, (item) => (
+                    <div>
+                      <p className="font-semibold text-foreground">{item.activityName}</p>
+                      <p className="text-sm text-muted-foreground">{item.year}</p>
+                    </div>
+                  ))}
+              </div>
+            </div>
+
             <div className="flex gap-4 pt-6 border-t border-border">
-              <Button onClick={handleApprove} className="flex-1 bg-success hover:bg-success/90">
+              <Button onClick={handleApprove} className="flex-1 bg-success hover:bg-success/90" disabled={isSubmitting}>
                 <CheckCircle className="h-5 w-5 mr-2" />
                 Approve Student
               </Button>
@@ -199,6 +287,7 @@ const AdminVerifyStudent = () => {
                 onClick={() => setShowRejectDialog(true)}
                 variant="destructive"
                 className="flex-1"
+                disabled={isSubmitting}
               >
                 <XCircle className="h-5 w-5 mr-2" />
                 Reject Student
@@ -229,7 +318,7 @@ const AdminVerifyStudent = () => {
           </div>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleReject}>
+            <AlertDialogAction onClick={handleReject} disabled={isSubmitting}>
               Reject Profile
             </AlertDialogAction>
           </AlertDialogFooter>

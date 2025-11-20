@@ -1,17 +1,47 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Navbar from "@/components/Navbar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { mockStudents } from "@/data/mockStudents";
 import { useNavigate } from "react-router-dom";
 import { Trophy, Award, Code, Briefcase, Medal } from "lucide-react";
+import { StudentProfile } from "@/types/auth";
+import { listProfiles } from "@/services/studentProfiles";
+import { listEvents } from "@/services/events";
+import { listStudents } from "@/services/students";
+import { useToast } from "@/hooks/use-toast";
 
 type RankingType = "academic" | "sports" | "hackathon" | "internship" | "overall";
 
 const Home = () => {
   const [rankingType, setRankingType] = useState<RankingType>("overall");
+  const [profiles, setProfiles] = useState<StudentProfile[]>([]);
+  const [stats, setStats] = useState({ students: 0, events: 0 });
+  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        const [approvedProfiles, students, events] = await Promise.all([
+          listProfiles("approved"),
+          listStudents(),
+          listEvents(),
+        ]);
+        setProfiles(approvedProfiles);
+        setStats({ students: students.length, events: events.length });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Unable to load dashboard";
+        toast({ title: "Dashboard error", description: message, variant: "destructive" });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [toast]);
 
   const getRankingIcon = (type: RankingType) => {
     switch (type) {
@@ -23,10 +53,32 @@ const Home = () => {
     }
   };
 
-  const sortedStudents = [...mockStudents].sort((a, b) => {
-    const rankKey = `${rankingType}Rank` as keyof typeof a;
-    return (a[rankKey] as number || 999) - (b[rankKey] as number || 999);
-  });
+  const rankings = useMemo(() => {
+    const base = [...profiles];
+
+    const score = (profile: StudentProfile) =>
+      profile.cgpa * 10 +
+      profile.certificates.length * 2 +
+      profile.hackathons.length * 3 +
+      profile.internships.length * 4 +
+      profile.sports.length * 1.5;
+
+    return {
+      overall: [...base].sort((a, b) => score(b) - score(a)),
+      academic: [...base].sort((a, b) => b.cgpa - a.cgpa),
+      sports: [...base].filter(p => p.sports.length).sort((a, b) => b.sports.length - a.sports.length),
+      hackathon: [...base].filter(p => p.hackathons.length).sort((a, b) => b.hackathons.length - a.hackathons.length),
+      internship: [...base].filter(p => p.internships.length).sort((a, b) => b.internships.length - a.internships.length),
+    } as Record<RankingType, StudentProfile[]>;
+  }, [profiles]);
+
+  const rankedStudents = rankings[rankingType]?.slice(0, 10) ?? [];
+  const averageCgpa = useMemo(() => {
+    if (!profiles.length) return "-";
+    const total = profiles.reduce((sum, profile) => sum + profile.cgpa, 0);
+    return (total / profiles.length).toFixed(2);
+  }, [profiles]);
+  const topPerformer = rankings.overall?.[0];
 
   return (
     <div className="min-h-screen bg-background">
@@ -56,7 +108,32 @@ const Home = () => {
           </div>
         </Card>
 
+        <div className="grid gap-4 mb-6 md:grid-cols-2 lg:grid-cols-4">
+          <Card className="p-4">
+            <div className="text-sm text-muted-foreground">Approved Students</div>
+            <div className="text-2xl font-semibold text-foreground">{stats.students}</div>
+          </Card>
+          <Card className="p-4">
+            <div className="text-sm text-muted-foreground">Published Events</div>
+            <div className="text-2xl font-semibold text-foreground">{stats.events}</div>
+          </Card>
+          <Card className="p-4">
+            <div className="text-sm text-muted-foreground">Average CGPA</div>
+            <div className="text-2xl font-semibold text-foreground">{averageCgpa}</div>
+          </Card>
+          <Card className="p-4">
+            <div className="text-sm text-muted-foreground">Top Performer</div>
+            <div className="text-lg font-semibold text-foreground">{topPerformer?.name ?? "-"}</div>
+            <p className="text-sm text-muted-foreground">{topPerformer?.branch ?? ""}</p>
+          </Card>
+        </div>
+
         <Card className="overflow-hidden bg-card">
+          {isLoading ? (
+            <div className="p-12 text-center text-muted-foreground">Loading rankings...</div>
+          ) : rankedStudents.length === 0 ? (
+            <div className="p-12 text-center text-muted-foreground">No approved students yet.</div>
+          ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-secondary border-b border-border">
@@ -71,15 +148,14 @@ const Home = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {sortedStudents.map((student, index) => {
-                  const rankKey = `${rankingType}Rank` as keyof typeof student;
-                  const rank = student[rankKey] as number || "-";
+                {rankedStudents.map((student, index) => {
+                  const rank = index + 1;
                   
                   return (
                     <tr 
                       key={student.id}
                       className="hover:bg-accent/50 cursor-pointer transition-colors"
-                      onClick={() => navigate(`/student/${student.id}`)}
+                      onClick={() => navigate(`/student/${student.uid}`)}
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
@@ -125,6 +201,7 @@ const Home = () => {
               </tbody>
             </table>
           </div>
+          )}
         </Card>
       </main>
     </div>

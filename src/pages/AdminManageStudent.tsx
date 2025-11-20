@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
 import { Card } from "@/components/ui/card";
@@ -9,20 +9,37 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { StudentProfile } from "@/types/auth";
-import { createProfile } from "@/services/studentProfiles";
-import { syncProfileAchievements } from "@/services/profileAchievements";
+import { getProfileById } from "@/services/studentProfiles";
+import { adminUpdateStudent, adminDeleteStudent } from "@/services/adminStudents";
 import { uploadProfileImage } from "@/services/storage";
 import { PlusCircle, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
-const CreateStudentProfile = () => {
+const AdminManageStudent = () => {
+  const { id } = useParams<{ id: string }>();
   const { user, isLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  const [profile, setProfile] = useState<StudentProfile | null>(null);
+  const [isFetching, setIsFetching] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
   const [formData, setFormData] = useState({
     name: "",
     uid: "",
-    email: user?.email || "",
+    email: "",
     year: "",
     branch: "",
     major: "",
@@ -30,9 +47,9 @@ const CreateStudentProfile = () => {
     skills: "",
     profilePicture: "",
   });
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+
   const [certificates, setCertificates] = useState<Array<StudentProfile["certificates"][number]>>([]);
   const [hackathons, setHackathons] = useState<Array<StudentProfile["hackathons"][number]>>([]);
   const [sports, setSports] = useState<Array<StudentProfile["sports"][number]>>([]);
@@ -44,119 +61,50 @@ const CreateStudentProfile = () => {
       return;
     }
 
-    if (!user || user.role !== "student") {
+    if (!user || user.role !== "admin") {
       navigate("/login");
+      return;
     }
-  }, [user, navigate, isLoading]);
 
-  useEffect(() => {
-    if (user?.email) {
-      setFormData(prev => ({ ...prev, email: user.email }));
-    }
-  }, [user]);
+    const loadProfile = async () => {
+      if (!id) return;
+      try {
+        setIsFetching(true);
+        const remoteProfile = await getProfileById(id);
+        setProfile(remoteProfile);
+        setFormData({
+          name: remoteProfile.name,
+          uid: remoteProfile.uid,
+          email: remoteProfile.email,
+          year: remoteProfile.year.toString(),
+          branch: remoteProfile.branch,
+          major: remoteProfile.major,
+          cgpa: remoteProfile.cgpa.toString(),
+          skills: remoteProfile.skills.join(", "),
+          profilePicture: remoteProfile.profilePicture ?? "",
+        });
+        setCertificates(remoteProfile.certificates ?? []);
+        setHackathons(remoteProfile.hackathons ?? []);
+        setSports(remoteProfile.sports ?? []);
+        setInternships(remoteProfile.internships ?? []);
+        setExtracurriculars(remoteProfile.extracurricular ?? []);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Unable to load student";
+        toast({ title: "Failed to load student", description: message, variant: "destructive" });
+        navigate("/admin/dashboard");
+      } finally {
+        setIsFetching(false);
+      }
+    };
+
+    loadProfile();
+  }, [id, user, isLoading, navigate, toast]);
 
   useEffect(() => () => {
     if (imagePreview) {
       URL.revokeObjectURL(imagePreview);
     }
   }, [imagePreview]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!user) {
-      navigate("/login");
-      return;
-    }
-
-    const cleanCertificates = certificates.filter((certificate) =>
-      certificate.title.trim() && certificate.category.trim() && certificate.year.trim() && certificate.proofLink.trim()
-    );
-    const cleanHackathons = hackathons.filter((hackathon) =>
-      hackathon.eventName.trim() && hackathon.position.trim() && hackathon.year.trim()
-    );
-    const cleanSports = sports.filter((sport) =>
-      sport.sport.trim() && sport.level.trim() && sport.position.trim()
-    );
-    const cleanInternships = internships.filter((internship) =>
-      internship.company.trim() && internship.role.trim() && internship.duration.trim()
-    );
-    const cleanExtracurriculars = extracurriculars.filter((activity) =>
-      activity.activityName.trim() && activity.year.trim()
-    );
-
-    const trimmedUid = formData.uid.trim();
-    if (!trimmedUid) {
-      toast({ title: "UID required", description: "Please enter your UID before submitting.", variant: "destructive" });
-      return;
-    }
-
-    let profilePictureUrl = formData.profilePicture.trim() || undefined;
-
-    if (profileImageFile) {
-      try {
-        const { publicUrl } = await uploadProfileImage(profileImageFile, trimmedUid);
-        profilePictureUrl = publicUrl;
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "Unable to upload profile image";
-        toast({ title: "Upload failed", description: message, variant: "destructive" });
-        return;
-      }
-    }
-
-    const newProfile: StudentProfile = {
-      id: typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : Math.random().toString(36).slice(2, 11),
-      userId: user.id,
-      name: formData.name.trim(),
-      uid: trimmedUid,
-      email: formData.email.trim(),
-      year: parseInt(formData.year, 10),
-      branch: formData.branch.trim(),
-      major: formData.major.trim(),
-      cgpa: parseFloat(formData.cgpa),
-      skills: formData.skills.split(",").map(s => s.trim()).filter(Boolean),
-      profilePicture: profilePictureUrl,
-      certificates: cleanCertificates,
-      internships: cleanInternships,
-      hackathons: cleanHackathons,
-      sports: cleanSports,
-      extracurricular: cleanExtracurriculars,
-      verificationStatus: "pending",
-      submittedAt: new Date().toISOString(),
-    };
-
-    try {
-      setIsSubmitting(true);
-      const createdProfile = await createProfile(newProfile);
-      await syncProfileAchievements(createdProfile.id, user.id, {
-        certificates: cleanCertificates,
-        hackathons: cleanHackathons,
-        sports: cleanSports,
-        internships: cleanInternships,
-        extracurricular: cleanExtracurriculars,
-      });
-      toast({
-        title: "Profile Submitted",
-        description: "Your profile has been sent for admin review.",
-      });
-      setProfileImageFile(null);
-      setImagePreview(null);
-      navigate("/student/dashboard");
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Unable to submit profile";
-      toast({
-        title: "Submission failed",
-        description: message,
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
 
   const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -169,6 +117,10 @@ const CreateStudentProfile = () => {
     setImagePreview(URL.createObjectURL(file));
   };
 
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
   const addEntry = <T,>(setter: React.Dispatch<React.SetStateAction<T[]>>, template: T) =>
     setter((prev) => [...prev, template]);
 
@@ -177,8 +129,7 @@ const CreateStudentProfile = () => {
     index: number,
     field: keyof T,
     value: string
-  ) =>
-    setter((prev) => prev.map((item, idx) => (idx === index ? { ...item, [field]: value } : item)));
+  ) => setter((prev) => prev.map((item, idx) => (idx === index ? { ...item, [field]: value } : item)));
 
   const removeEntry = <T,>(setter: React.Dispatch<React.SetStateAction<T[]>>, index: number) =>
     setter((prev) => prev.filter((_, idx) => idx !== index));
@@ -206,12 +157,7 @@ const CreateStudentProfile = () => {
           <h3 className="text-xl font-semibold text-foreground">{title}</h3>
           <p className="text-sm text-muted-foreground">{description}</p>
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => addEntry(setter, template)}
-          className="gap-2"
-        >
+        <Button type="button" variant="outline" onClick={() => addEntry(setter, template)} className="gap-2">
           <PlusCircle className="h-4 w-4" />
           Add
         </Button>
@@ -253,12 +199,100 @@ const CreateStudentProfile = () => {
     </div>
   );
 
-  if (isLoading) {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!profile) return;
+
+    const trimmedUid = formData.uid.trim();
+    if (!trimmedUid) {
+      toast({ title: "UID required", description: "UID cannot be empty.", variant: "destructive" });
+      return;
+    }
+
+    const cleanCertificates = certificates.filter((certificate) =>
+      certificate.title.trim() && certificate.category.trim() && certificate.year.trim() && certificate.proofLink.trim()
+    );
+    const cleanHackathons = hackathons.filter((hackathon) =>
+      hackathon.eventName.trim() && hackathon.position.trim() && hackathon.year.trim()
+    );
+    const cleanSports = sports.filter((sport) => sport.sport.trim() && sport.level.trim() && sport.position.trim());
+    const cleanInternships = internships.filter((internship) =>
+      internship.company.trim() && internship.role.trim() && internship.duration.trim()
+    );
+    const cleanExtracurriculars = extracurriculars.filter((activity) => activity.activityName.trim() && activity.year.trim());
+
+    let profilePictureUrl = formData.profilePicture.trim() || undefined;
+
+    if (profileImageFile) {
+      try {
+        const { publicUrl } = await uploadProfileImage(profileImageFile, trimmedUid);
+        profilePictureUrl = publicUrl;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Unable to upload profile image";
+        toast({ title: "Upload failed", description: message, variant: "destructive" });
+        return;
+      }
+    }
+
+    try {
+      setIsSubmitting(true);
+      const updatedProfile = await adminUpdateStudent(profile.id, {
+        profile: {
+          name: formData.name.trim(),
+          uid: trimmedUid,
+          email: formData.email.trim(),
+          year: parseInt(formData.year, 10),
+          branch: formData.branch.trim(),
+          major: formData.major.trim(),
+          cgpa: parseFloat(formData.cgpa),
+          skills: formData.skills.split(",").map((skill) => skill.trim()).filter(Boolean),
+          profilePicture: profilePictureUrl,
+        },
+        achievements: {
+          certificates: cleanCertificates,
+          hackathons: cleanHackathons,
+          sports: cleanSports,
+          internships: cleanInternships,
+          extracurricular: cleanExtracurriculars,
+        },
+      });
+
+      setProfile(updatedProfile);
+      setFormData((prev) => ({ ...prev, profilePicture: profilePictureUrl ?? "" }));
+      setProfileImageFile(null);
+      setImagePreview(null);
+
+      toast({ title: "Student Updated", description: "Changes saved successfully." });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to update student";
+      toast({ title: "Update failed", description: message, variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!profile) return;
+    try {
+      setIsDeleting(true);
+      await adminDeleteStudent(profile.id);
+      toast({ title: "Student Deleted", description: "The student and related data were removed." });
+      navigate("/admin/dashboard");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to delete student";
+      toast({ title: "Deletion failed", description: message, variant: "destructive" });
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+    }
+  };
+
+  if (isLoading || isFetching || !profile) {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
         <div className="container mx-auto px-4 py-24 text-center text-muted-foreground">
-          Preparing form...
+          Loading student...
         </div>
       </div>
     );
@@ -268,79 +302,46 @@ const CreateStudentProfile = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto">
+        <div className="max-w-2xl mx-auto space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-foreground mb-1">Manage Student</h1>
+              <p className="text-muted-foreground">Edit approved student details or remove their record entirely.</p>
+            </div>
+            <Button variant="outline" onClick={() => navigate("/admin/dashboard")}>Back</Button>
+          </div>
+
           <Card className="p-8">
-            <h1 className="text-3xl font-bold text-foreground mb-6">Create Your Profile</h1>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Full Name *</Label>
-                  <Input
-                    id="name"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    required
-                  />
+                  <Input id="name" name="name" value={formData.name} onChange={handleChange} required />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="uid">UID *</Label>
-                  <Input
-                    id="uid"
-                    name="uid"
-                    value={formData.uid}
-                    onChange={handleChange}
-                    required
-                  />
+                  <Input id="uid" name="uid" value={formData.uid} onChange={handleChange} required />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="email">Email *</Label>
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    required
-                  />
+                  <Input id="email" name="email" type="email" value={formData.email} onChange={handleChange} required />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="year">Year *</Label>
-                  <Input
-                    id="year"
-                    name="year"
-                    type="number"
-                    min="1"
-                    max="4"
-                    value={formData.year}
-                    onChange={handleChange}
-                    required
-                  />
+                  <Input id="year" name="year" type="number" min="1" max="4" value={formData.year} onChange={handleChange} required />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="branch">Branch *</Label>
-                  <Input
-                    id="branch"
-                    name="branch"
-                    value={formData.branch}
-                    onChange={handleChange}
-                    required
-                  />
+                  <Input id="branch" name="branch" value={formData.branch} onChange={handleChange} required />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="major">Major *</Label>
-                  <Input
-                    id="major"
-                    name="major"
-                    value={formData.major}
-                    onChange={handleChange}
-                    required
-                  />
+                  <Input id="major" name="major" value={formData.major} onChange={handleChange} required />
                 </div>
 
                 <div className="space-y-2">
@@ -349,9 +350,9 @@ const CreateStudentProfile = () => {
                     id="cgpa"
                     name="cgpa"
                     type="number"
-                    step="0.01"
                     min="0"
                     max="10"
+                    step="0.01"
                     value={formData.cgpa}
                     onChange={handleChange}
                     required
@@ -361,9 +362,7 @@ const CreateStudentProfile = () => {
                 <div className="space-y-2">
                   <Label htmlFor="profileImageFile">Profile Picture</Label>
                   <Input id="profileImageFile" type="file" accept="image/*" onChange={handleProfileImageChange} />
-                  <p className="text-xs text-muted-foreground">
-                    Upload a square image (JPG or PNG). Existing URL input will be used if no file is selected.
-                  </p>
+                  <p className="text-xs text-muted-foreground">Upload to replace the current image stored in Supabase.</p>
                   {(imagePreview || formData.profilePicture) && (
                     <img
                       src={imagePreview || formData.profilePicture}
@@ -400,13 +399,13 @@ const CreateStudentProfile = () => {
               <div className="space-y-10">
                 {renderSection({
                   title: "Certificates",
-                  description: "Add certifications with proof links for verification",
+                  description: "Curate the student's verified certificates",
                   items: certificates,
                   setter: setCertificates,
-                  emptyLabel: "No certificates added yet.",
+                  emptyLabel: "No certificates recorded.",
                   template: { title: "", category: "", year: "", proofLink: "" },
                   fields: [
-                    { name: "title", label: "Certificate Title", placeholder: "AWS Cloud Practitioner" },
+                    { name: "title", label: "Title", placeholder: "AWS Architect" },
                     { name: "category", label: "Category", placeholder: "Cloud" },
                     { name: "year", label: "Year", placeholder: "2024" },
                     { name: "proofLink", label: "Proof Link", placeholder: "https://..." },
@@ -415,10 +414,10 @@ const CreateStudentProfile = () => {
 
                 {renderSection({
                   title: "Hackathons",
-                  description: "Showcase hackathon achievements",
+                  description: "Maintain hackathon outcomes",
                   items: hackathons,
                   setter: setHackathons,
-                  emptyLabel: "No hackathons added yet.",
+                  emptyLabel: "No hackathons recorded.",
                   template: { eventName: "", position: "", year: "" },
                   fields: [
                     { name: "eventName", label: "Event Name", placeholder: "Smart India Hackathon" },
@@ -429,10 +428,10 @@ const CreateStudentProfile = () => {
 
                 {renderSection({
                   title: "Sports Achievements",
-                  description: "List sports achievements and levels",
+                  description: "Track sports accolades",
                   items: sports,
                   setter: setSports,
-                  emptyLabel: "No sports achievements added yet.",
+                  emptyLabel: "No sports achievements recorded.",
                   template: { sport: "", level: "", position: "" },
                   fields: [
                     { name: "sport", label: "Sport", placeholder: "Basketball" },
@@ -443,10 +442,10 @@ const CreateStudentProfile = () => {
 
                 {renderSection({
                   title: "Internships",
-                  description: "Detail your internship experience",
+                  description: "Document internship experience",
                   items: internships,
                   setter: setInternships,
-                  emptyLabel: "No internships added yet.",
+                  emptyLabel: "No internships recorded.",
                   template: { company: "", role: "", duration: "" },
                   fields: [
                     { name: "company", label: "Company", placeholder: "OpenAI" },
@@ -457,42 +456,56 @@ const CreateStudentProfile = () => {
 
                 {renderSection({
                   title: "Extracurricular Activities",
-                  description: "Highlight leadership and club activities",
+                  description: "Highlight leadership roles",
                   items: extracurriculars,
                   setter: setExtracurriculars,
-                  emptyLabel: "No extracurricular activities added yet.",
+                  emptyLabel: "No extracurricular activities recorded.",
                   template: { activityName: "", year: "" },
                   fields: [
-                    { name: "activityName", label: "Activity Name", placeholder: "Music Club President" },
-                    { name: "year", label: "Year", placeholder: "2023" },
+                    { name: "activityName", label: "Activity", placeholder: "Coding Club Lead" },
+                    { name: "year", label: "Year", placeholder: "2024" },
                   ],
                 })}
               </div>
 
-              <div className="bg-warning/10 border border-warning/20 rounded-lg p-4">
-                <p className="text-sm text-warning">
-                  Your profile will be sent to admin for verification. You will be notified once it's reviewed.
-                </p>
-              </div>
-
-              <div className="flex gap-4">
+              <div className="flex flex-col gap-4 md:flex-row">
                 <Button type="submit" className="flex-1" disabled={isSubmitting}>
-                  Submit for Review
+                  {isSubmitting ? "Saving..." : "Save Changes"}
                 </Button>
                 <Button
                   type="button"
-                  variant="outline"
-                  onClick={() => navigate("/student/dashboard")}
+                  variant="destructive"
+                  className="flex-1"
+                  onClick={() => setDeleteDialogOpen(true)}
+                  disabled={isDeleting}
                 >
-                  Cancel
+                  Delete Student
                 </Button>
               </div>
             </form>
           </Card>
         </div>
       </div>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Student?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action removes the student, their achievements, and their profile picture from storage. This cannot be
+              undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
 
-export default CreateStudentProfile;
+export default AdminManageStudent;

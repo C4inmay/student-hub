@@ -1,18 +1,40 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Navbar from "@/components/Navbar";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { mockStudents } from "@/data/mockStudents";
 import { useNavigate } from "react-router-dom";
 import { Search, User } from "lucide-react";
+import { listStudents } from "@/services/students";
+import { Student } from "@/types/database";
+import { useToast } from "@/hooks/use-toast";
 
 const StudentDirectory = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [students, setStudents] = useState<Student[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+  const { toast } = useToast();
 
-  const filteredStudents = mockStudents.filter(student =>
+  useEffect(() => {
+    const fetchProfiles = async () => {
+      try {
+        setIsLoading(true);
+        const data = await listStudents();
+        setStudents(data);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Unable to load students";
+        toast({ title: "Failed to load students", description: message, variant: "destructive" });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProfiles();
+  }, [toast]);
+
+  const filteredStudents = students.filter(student =>
     student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     student.uid.toLowerCase().includes(searchQuery.toLowerCase()) ||
     student.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -42,6 +64,11 @@ const StudentDirectory = () => {
           </div>
         </div>
 
+        {isLoading ? (
+          <Card className="p-12 text-center bg-card">
+            <p className="text-muted-foreground">Loading students...</p>
+          </Card>
+        ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredStudents.map((student) => (
             <Card key={student.id} className="p-6 hover:shadow-lg transition-shadow bg-card">
@@ -55,12 +82,8 @@ const StudentDirectory = () => {
                 
                 <div className="space-y-2 w-full mb-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">CGPA:</span>
-                    <Badge variant="secondary" className="font-semibold">{student.cgpa}</Badge>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Major:</span>
-                    <span className="text-sm font-medium text-foreground">{student.major}</span>
+                    <span className="text-sm text-muted-foreground">UID:</span>
+                    <Badge variant="secondary" className="font-semibold">{student.uid}</Badge>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Year:</span>
@@ -72,8 +95,23 @@ const StudentDirectory = () => {
                   </div>
                 </div>
 
+                {student.skills.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mb-4 justify-center">
+                    {student.skills.slice(0, 4).map((skill, index) => (
+                      <Badge key={`${student.id}-${skill}-${index}`} variant="outline" className="text-xs">
+                        {skill}
+                      </Badge>
+                    ))}
+                    {student.skills.length > 4 && (
+                      <Badge variant="outline" className="text-xs">
+                        +{student.skills.length - 4}
+                      </Badge>
+                    )}
+                  </div>
+                )}
+
                 <Button 
-                  onClick={() => navigate(`/student/${student.id}`)}
+                  onClick={() => navigate(`/student/${student.uid}`)}
                   className="w-full"
                 >
                   View Profile
@@ -82,8 +120,9 @@ const StudentDirectory = () => {
             </Card>
           ))}
         </div>
+        )}
 
-        {filteredStudents.length === 0 && (
+        {!isLoading && filteredStudents.length === 0 && (
           <Card className="p-12 text-center bg-card">
             <p className="text-muted-foreground">No students found matching your search.</p>
           </Card>

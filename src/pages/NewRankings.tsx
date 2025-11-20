@@ -1,64 +1,110 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Navbar from "@/components/Navbar";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { mockStudents } from "@/data/mockStudents";
 import { Trophy, Award, Zap, Briefcase, Lightbulb, Medal } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { listProfiles } from "@/services/studentProfiles";
+import { StudentProfile } from "@/types/auth";
 
 type RankingCategory = "overall" | "academics" | "sports" | "internships" | "hackathons";
 
+const computeOverallScore = (profile: StudentProfile) => {
+  const cgpaScore = profile.cgpa * 10;
+  const certificatesScore = profile.certificates.length * 3;
+  const internshipsScore = profile.internships.length * 5;
+  const hackathonScore = profile.hackathons.length * 4;
+  const sportsScore = profile.sports.length * 4;
+  return Math.round(cgpaScore + certificatesScore + internshipsScore + hackathonScore + sportsScore);
+};
+
+const computeCategoryScore = (profile: StudentProfile, category: RankingCategory) => {
+  switch (category) {
+    case "academics":
+      return profile.cgpa * 10 + profile.certificates.length * 2;
+    case "sports":
+      return profile.sports.length * 10;
+    case "internships":
+      return profile.internships.length * 12;
+    case "hackathons":
+      return profile.hackathons.length * 12;
+    default:
+      return computeOverallScore(profile);
+  }
+};
+
+const formatYearLabel = (year: number) => {
+  if (year === 5) return "Graduate";
+  const suffix = year === 1 ? "st" : year === 2 ? "nd" : year === 3 ? "rd" : "th";
+  return `${year}${suffix} Year`;
+};
+
 const NewRankings = () => {
   const [activeCategory, setActiveCategory] = useState<RankingCategory>("overall");
+  const [profiles, setProfiles] = useState<StudentProfile[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
 
-  const stats = {
-    totalStudents: mockStudents.length,
-    avgCGPA: (mockStudents.reduce((sum, s) => sum + s.cgpa, 0) / mockStudents.length).toFixed(2),
-    topScore: Math.max(...mockStudents.map(s => 
-      (s.overallRank ? 100 - s.overallRank * 10 : 0) + 
-      s.certificates.length * 5 + 
-      s.internships.length * 10 +
-      s.hackathons.length * 8
-    )),
-    totalAchievements: mockStudents.reduce((sum, s) => 
-      sum + s.certificates.length + s.internships.length + s.hackathons.length + s.sports.length, 0
-    ),
-  };
+  useEffect(() => {
+    const fetchProfiles = async () => {
+      try {
+        setIsLoading(true);
+        const data = await listProfiles("approved");
+        setProfiles(data);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Unable to load rankings";
+        toast({ title: "Failed to load rankings", description: message, variant: "destructive" });
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const getTopThree = (category: RankingCategory) => {
-    const rankKey = category === "overall" ? "overallRank" : 
-                    category === "academics" ? "academicRank" :
-                    category === "sports" ? "sportsRank" :
-                    category === "internships" ? "internshipRank" :
-                    "hackathonRank";
-    
-    return [...mockStudents]
-      .filter(s => s[rankKey as keyof typeof s])
-      .sort((a, b) => (a[rankKey as keyof typeof a] as number) - (b[rankKey as keyof typeof b] as number))
-      .slice(0, 3);
-  };
+    fetchProfiles();
+  }, [toast]);
 
-  const getCategoryRankings = (category: RankingCategory) => {
-    const rankKey = category === "overall" ? "overallRank" : 
-                    category === "academics" ? "academicRank" :
-                    category === "sports" ? "sportsRank" :
-                    category === "internships" ? "internshipRank" :
-                    "hackathonRank";
-    
-    return [...mockStudents]
-      .filter(s => s[rankKey as keyof typeof s])
-      .sort((a, b) => (a[rankKey as keyof typeof a] as number) - (b[rankKey as keyof typeof b] as number));
-  };
+  const stats = useMemo(() => {
+    if (profiles.length === 0) {
+      return { totalStudents: 0, avgCGPA: "0.00", topScore: 0, totalAchievements: 0 };
+    }
 
-  const topThree = getTopThree(activeCategory);
-  const rankings = getCategoryRankings(activeCategory);
+    const totalAchievements = profiles.reduce(
+      (sum, profile) =>
+        sum +
+        profile.certificates.length +
+        profile.internships.length +
+        profile.hackathons.length +
+        profile.sports.length +
+        profile.extracurricular.length,
+      0
+    );
 
-  const getScoreForStudent = (student: typeof mockStudents[0]) => {
-    return (student.overallRank ? 160 - student.overallRank * 10 : 0) + 
-           student.certificates.length * 3 + 
-           student.internships.length * 5 +
-           student.hackathons.length * 4;
-  };
+    const topScore = Math.max(...profiles.map((profile) => computeOverallScore(profile)), 0);
+
+    const avgCGPA = (profiles.reduce((sum, profile) => sum + profile.cgpa, 0) / profiles.length).toFixed(2);
+
+    return {
+      totalStudents: profiles.length,
+      avgCGPA,
+      topScore,
+      totalAchievements,
+    };
+  }, [profiles]);
+
+  const getCategoryRankings = (category: RankingCategory) =>
+    [...profiles]
+      .sort((a, b) => {
+        const diff = computeCategoryScore(b, category) - computeCategoryScore(a, category);
+        return diff !== 0 ? diff : a.name.localeCompare(b.name);
+      })
+      .filter((profile) => computeCategoryScore(profile, category) > 0 || category === "overall");
+
+  const getTopThree = (category: RankingCategory) => getCategoryRankings(category).slice(0, 3);
+
+  const rankings = useMemo(() => getCategoryRankings(activeCategory), [activeCategory, profiles]);
+  const topThree = useMemo(() => getTopThree(activeCategory), [activeCategory, profiles]);
+
+  const getScoreForStudent = (profile: StudentProfile) => computeCategoryScore(profile, activeCategory);
 
   return (
     <div className="min-h-screen bg-background">
@@ -134,6 +180,11 @@ const NewRankings = () => {
           <p className="text-muted-foreground text-center mb-8">Celebrating our highest achievers</p>
           
           <div className="grid md:grid-cols-3 gap-6">
+            {!isLoading && topThree.length === 0 && (
+              <Card className="p-6 text-center bg-card col-span-full">
+                <p className="text-muted-foreground">No approved students available yet.</p>
+              </Card>
+            )}
             {topThree.map((student, index) => {
               const rank = index + 1;
               const borderColors = ['border-gold', 'border-silver', 'border-bronze'];
@@ -158,7 +209,7 @@ const NewRankings = () => {
                     </div>
                     
                     <h3 className="text-xl font-bold text-foreground mb-1">{student.name}</h3>
-                    <p className="text-sm text-muted-foreground mb-1">{student.major} • {student.year === 5 ? "Graduate" : `${student.year}${student.year === 1 ? 'st' : student.year === 2 ? 'nd' : student.year === 3 ? 'rd' : 'th'} Year`}</p>
+                    <p className="text-sm text-muted-foreground mb-1">{student.major} • {formatYearLabel(student.year)}</p>
                     <p className="text-sm font-medium text-muted-foreground mb-4">CGPA: {student.cgpa}</p>
                     
                     <Badge className={`${iconBg} text-white px-6 py-2 text-base font-bold`}>
@@ -201,6 +252,16 @@ const NewRankings = () => {
 
             <TabsContent value={activeCategory}>
               <div className="space-y-3">
+                {isLoading && (
+                  <Card className="p-6 text-center bg-card">
+                    <p className="text-muted-foreground">Loading rankings...</p>
+                  </Card>
+                )}
+                {!isLoading && rankings.length === 0 && (
+                  <Card className="p-6 text-center bg-card">
+                    <p className="text-muted-foreground">No achievements found for this category yet.</p>
+                  </Card>
+                )}
                 {rankings.map((student, index) => {
                   const rank = index + 1;
                   const score = getScoreForStudent(student);
@@ -223,10 +284,12 @@ const NewRankings = () => {
                         <div>
                           <div className="flex items-center gap-2">
                             <p className="font-bold text-foreground text-lg">{student.name}</p>
-                            {rank <= 3 && <Badge className="bg-success text-success-foreground text-xs">Verified ✓</Badge>}
+                            {student.verificationStatus === "approved" && (
+                              <Badge className="bg-success text-success-foreground text-xs">Verified ✓</Badge>
+                            )}
                           </div>
                           <p className="text-sm text-muted-foreground">
-                            {student.branch} • Year {student.year}
+                            {student.branch} • {formatYearLabel(student.year)}
                           </p>
                         </div>
                       </div>

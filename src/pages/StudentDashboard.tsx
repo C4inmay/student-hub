@@ -7,28 +7,52 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StudentProfile } from "@/types/auth";
 import { CheckCircle, Clock, XCircle, Plus, Edit } from "lucide-react";
+import { getProfileByUserId } from "@/services/studentProfiles";
+import { useToast } from "@/hooks/use-toast";
 
 const StudentDashboard = () => {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [profile, setProfile] = useState<StudentProfile | null>(null);
+  const [isFetching, setIsFetching] = useState(true);
 
   useEffect(() => {
+    if (isLoading) {
+      return;
+    }
+
     if (!user || user.role !== "student") {
       navigate("/login");
       return;
     }
 
-    // Load profile from localStorage
-    const storedProfiles = localStorage.getItem("studentProfiles");
-    if (storedProfiles) {
-      const profiles: StudentProfile[] = JSON.parse(storedProfiles);
-      const userProfile = profiles.find(p => p.userId === user.id);
-      if (userProfile) {
-        setProfile(userProfile);
+    const loadProfile = async () => {
+      try {
+        setIsFetching(true);
+        const remoteProfile = await getProfileByUserId(user.id);
+        setProfile(remoteProfile);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Unable to load profile";
+        toast({ title: "Failed to load profile", description: message, variant: "destructive" });
+      } finally {
+        setIsFetching(false);
       }
-    }
-  }, [user, navigate]);
+    };
+
+    loadProfile();
+  }, [user, navigate, isLoading, toast]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="container mx-auto px-4 py-24 text-center text-muted-foreground">
+          Loading dashboard...
+        </div>
+      </div>
+    );
+  }
 
   const getStatusBadge = () => {
     if (!profile) return null;
@@ -57,6 +81,23 @@ const StudentDashboard = () => {
         );
     }
   };
+
+  const renderListCard = (
+    title: string,
+    items: Array<Record<string, string>>,
+    renderItem: (item: Record<string, string>, index: number) => React.ReactNode
+  ) => (
+    <Card className="p-6">
+      <h3 className="text-lg font-semibold text-foreground mb-4">{title}</h3>
+      <div className="space-y-4">
+        {items.map((item, index) => (
+          <div key={index} className="rounded-lg border border-border p-4">
+            {renderItem(item, index)}
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -165,6 +206,56 @@ const StudentDashboard = () => {
                   </div>
                 </Card>
               )}
+
+              <div className="space-y-6">
+                {profile.certificates.length > 0 &&
+                  renderListCard("Certificates", profile.certificates as Array<Record<string, string>>, (item) => (
+                    <div className="space-y-1">
+                      <p className="font-semibold text-foreground">{item.title}</p>
+                      <p className="text-sm text-muted-foreground">{item.category} · {item.year}</p>
+                      <a
+                        href={item.proofLink}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-sm text-primary underline"
+                      >
+                        Proof Link
+                      </a>
+                    </div>
+                  ))}
+
+                {profile.hackathons.length > 0 &&
+                  renderListCard("Hackathons", profile.hackathons as Array<Record<string, string>>, (item) => (
+                    <div>
+                      <p className="font-semibold text-foreground">{item.eventName}</p>
+                      <p className="text-sm text-muted-foreground">{item.position} · {item.year}</p>
+                    </div>
+                  ))}
+
+                {profile.sports.length > 0 &&
+                  renderListCard("Sports Achievements", profile.sports as Array<Record<string, string>>, (item) => (
+                    <div>
+                      <p className="font-semibold text-foreground">{item.sport}</p>
+                      <p className="text-sm text-muted-foreground">{item.level} · {item.position}</p>
+                    </div>
+                  ))}
+
+                {profile.internships.length > 0 &&
+                  renderListCard("Internships", profile.internships as Array<Record<string, string>>, (item) => (
+                    <div>
+                      <p className="font-semibold text-foreground">{item.company}</p>
+                      <p className="text-sm text-muted-foreground">{item.role} · {item.duration}</p>
+                    </div>
+                  ))}
+
+                {profile.extracurricular.length > 0 &&
+                  renderListCard("Extracurricular Activities", profile.extracurricular as Array<Record<string, string>>, (item) => (
+                    <div>
+                      <p className="font-semibold text-foreground">{item.activityName}</p>
+                      <p className="text-sm text-muted-foreground">{item.year}</p>
+                    </div>
+                  ))}
+              </div>
             </>
           )}
         </div>

@@ -5,13 +5,17 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 
 const Navbar = () => {
-  const { user, logout, isAuthenticated } = useAuth();
+  const { user, logout, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate("/login");
   };
+
+  if (isLoading) {
+    return null;
+  }
 
   // Public navbar (not logged in)
   if (!isAuthenticated) {
@@ -26,7 +30,7 @@ const Navbar = () => {
             
             <div className="flex items-center gap-2">
               <NavLink
-                to="/"
+                to="/dashboard"
                 className="px-4 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
                 activeClassName="!text-primary !bg-accent"
               >
@@ -124,6 +128,13 @@ const Navbar = () => {
               activeClassName="!text-primary !bg-accent"
             >
               Dashboard
+            </NavLink>
+            <NavLink
+              to="/admin/performance"
+              className="px-4 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+              activeClassName="!text-primary !bg-accent"
+            >
+              Performance
             </NavLink>
             <NavLink
               to="/directory"

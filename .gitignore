@@ -1,4 +1,57 @@
-# Logs
+insert into public.student_profiles (
+  user_id, name, uid, email, year, branch, major, cgpa, skills,
+  certificates, internships, hackathons, sports, extracurricular, verification_status
+) values (
+  'student-001',
+  'Aditi Rao',
+  '22BCS001',
+  'aditi@example.com',
+  3,
+  'CSE',
+  'AI & ML',
+  9.10,
+  array['Python','TensorFlow','Public Speaking'],
+  '[{"name":"GCP ML","issuer":"Google","date":"2024-02-10"}]',
+  '[{"company":"Acme AI","role":"ML Intern","duration":"May-Aug 2024"}]',
+  '[{"name":"Hack36","position":"2nd","date":"2024-03-14"}]',
+  '[{"sport":"Badminton","achievement":"State Bronze","year":"2023"}]',
+  '[]',
+  'approved'
+);alter table public.student_profiles enable row level security;
+
+create policy "students can read own profile"
+  on public.student_profiles
+  for select
+  using (auth.uid()::text = user_id);
+
+create policy "admins can read everything"
+  on public.student_profiles
+  for select
+  using (true);create extension if not exists "uuid-ossp";
+
+create table if not exists public.student_profiles (
+  id uuid primary key default uuid_generate_v4(),
+  user_id text not null,                 -- or uuid references auth.users(id)
+  name text not null,
+  uid text not null unique,
+  email text not null,
+  year integer not null check (year between 1 and 4),
+  branch text not null,
+  major text not null,
+  cgpa numeric(3,2) not null check (cgpa between 0 and 10),
+  skills text[] default '{}',
+  profile_picture text,
+  certificates jsonb not null default '[]',
+  internships jsonb not null default '[]',
+  hackathons jsonb not null default '[]',
+  sports jsonb not null default '[]',
+  extracurricular jsonb not null default '[]',
+  verification_status text not null default 'pending' check (verification_status in ('pending','approved','rejected')),
+  rejection_reason text,
+  submitted_at timestamptz not null default now(),
+  reviewed_at timestamptz,
+  created_at timestamptz not null default now()
+);# Logs
 logs
 *.log
 npm-debug.log*
@@ -11,6 +64,8 @@ node_modules
 dist
 dist-ssr
 *.local
+.env
+.env.*
 
 # Editor directories and files
 .vscode/*

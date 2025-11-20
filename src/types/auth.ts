@@ -21,11 +21,11 @@ export interface StudentProfile {
   cgpa: number;
   skills: string[];
   profilePicture?: string;
-  certificates: Array<{ name: string; issuer: string; date: string }>;
+  certificates: Array<{ title: string; category: string; year: string; proofLink: string }>;
   internships: Array<{ company: string; role: string; duration: string }>;
-  hackathons: Array<{ name: string; position: string; date: string }>;
-  sports: Array<{ sport: string; achievement: string; year: string }>;
-  extracurricular: Array<{ activity: string; role: string; year: string }>;
+  hackathons: Array<{ eventName: string; position: string; year: string }>;
+  sports: Array<{ sport: string; level: string; position: string }>;
+  extracurricular: Array<{ activityName: string; year: string }>;
   verificationStatus: VerificationStatus;
   rejectionReason?: string;
   submittedAt: string;

@@ -17,6 +17,7 @@ import CreateStudentProfile from "./pages/CreateStudentProfile";
 import UpdateStudentProfile from "./pages/UpdateStudentProfile";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminVerifyStudent from "./pages/AdminVerifyStudent";
+import AdminManageStudent from "./pages/AdminManageStudent";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,8 +30,9 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Home />} />
+            <Route path="/" element={<Login />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/dashboard" element={<Home />} />
             
             {/* Public Routes */}
             <Route path="/directory" element={<StudentDirectory />} />
@@ -45,7 +47,9 @@ const App = () => (
             
             {/* Admin Routes */}
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/performance" element={<Home />} />
             <Route path="/admin/verify/:id" element={<AdminVerifyStudent />} />
+            <Route path="/admin/students/:id/edit" element={<AdminManageStudent />} />
             
             {/* Legacy Routes */}
             <Route path="/add-student" element={<AddStudent />} />
