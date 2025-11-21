@@ -136,6 +136,16 @@ const StudentDashboard = () => {
                   )}
                 </div>
 
+                {profile.profilePicture && (
+                  <div className="flex justify-center mb-6">
+                    <img
+                      src={profile.profilePicture}
+                      alt={profile.name}
+                      className="w-28 h-28 rounded-full object-cover border border-border"
+                    />
+                  </div>
+                )}
+
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="space-y-4">
                     <div>
@@ -160,10 +170,6 @@ const StudentDashboard = () => {
                     <div>
                       <p className="text-sm text-muted-foreground">Branch</p>
                       <p className="font-semibold text-foreground">{profile.branch}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Major</p>
-                      <p className="font-semibold text-foreground">{profile.major}</p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">CGPA</p>

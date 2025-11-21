@@ -17,7 +17,6 @@ export interface StudentProfile {
   email: string;
   year: number;
   branch: string;
-  major: string;
   cgpa: number;
   skills: string[];
   profilePicture?: string;

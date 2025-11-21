@@ -209,7 +209,7 @@ const NewRankings = () => {
                     </div>
                     
                     <h3 className="text-xl font-bold text-foreground mb-1">{student.name}</h3>
-                    <p className="text-sm text-muted-foreground mb-1">{student.major} • {formatYearLabel(student.year)}</p>
+                    <p className="text-sm text-muted-foreground mb-1">{student.branch} • {formatYearLabel(student.year)}</p>
                     <p className="text-sm font-medium text-muted-foreground mb-4">CGPA: {student.cgpa}</p>
                     
                     <Badge className={`${iconBg} text-white px-6 py-2 text-base font-bold`}>

@@ -12,7 +12,6 @@ export interface AdminStudentPayload {
     email: string;
     year: number;
     branch: string;
-    major: string;
     cgpa: number;
     skills: string[];
     profilePicture?: string;
@@ -34,7 +33,6 @@ export const adminUpdateStudent = async (profileId: string, payload: AdminStuden
       email: profile.email,
       year: profile.year,
       branch: profile.branch,
-      major: profile.major,
       cgpa: profile.cgpa,
       skills: profile.skills,
       profile_picture: profile.profilePicture ?? null,

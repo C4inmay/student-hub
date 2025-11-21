@@ -157,6 +157,16 @@ const AdminVerifyStudent = () => {
 
           <Card className="p-8">
             <h2 className="text-2xl font-bold text-foreground mb-6">Personal Information</h2>
+
+            {profile.profilePicture && (
+              <div className="flex justify-center mb-8">
+                <img
+                  src={profile.profilePicture}
+                  alt={profile.name}
+                  className="w-28 h-28 rounded-full object-cover border border-border"
+                />
+              </div>
+            )}
             
             <div className="grid md:grid-cols-2 gap-6 mb-8">
               <div className="space-y-4">
@@ -182,10 +192,6 @@ const AdminVerifyStudent = () => {
                 <div>
                   <p className="text-sm text-muted-foreground">Branch</p>
                   <p className="text-lg font-semibold text-foreground">{profile.branch}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Major</p>
-                  <p className="text-lg font-semibold text-foreground">{profile.major}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">CGPA</p>

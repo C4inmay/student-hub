@@ -16,7 +16,6 @@ const AddStudent = () => {
     uid: "",
     year: "",
     branch: "",
-    major: "",
     cgpa: "",
     skills: "",
   });
@@ -46,7 +45,6 @@ const AddStudent = () => {
       uid: "",
       year: "",
       branch: "",
-      major: "",
       cgpa: "",
       skills: "",
     });
@@ -135,16 +133,6 @@ const AddStudent = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="major">Major</Label>
-                <Input
-                  id="major"
-                  value={formData.major}
-                  onChange={(e) => handleChange("major", e.target.value)}
-                  placeholder="e.g., Software Engineering"
-                />
-              </div>
-
-              <div className="space-y-2">
                 <Label htmlFor="cgpa">CGPA</Label>
                 <Input
                   id="cgpa"
@@ -194,7 +182,6 @@ const AddStudent = () => {
                 uid: "",
                 year: "",
                 branch: "",
-                major: "",
                 cgpa: "",
                 skills: "",
               })}>

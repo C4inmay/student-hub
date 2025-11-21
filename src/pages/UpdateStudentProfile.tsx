@@ -28,13 +28,12 @@ const UpdateStudentProfile = () => {
     email: "",
     year: "",
     branch: "",
-    major: "",
     cgpa: "",
     skills: "",
-    profilePicture: "",
   });
   const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [currentProfilePicture, setCurrentProfilePicture] = useState<string>("");
   const [certificates, setCertificates] = useState<Array<StudentProfile["certificates"][number]>>([]);
   const [hackathons, setHackathons] = useState<Array<StudentProfile["hackathons"][number]>>([]);
   const [sports, setSports] = useState<Array<StudentProfile["sports"][number]>>([]);
@@ -72,11 +71,10 @@ const UpdateStudentProfile = () => {
           email: remoteProfile.email,
           year: remoteProfile.year.toString(),
           branch: remoteProfile.branch,
-          major: remoteProfile.major,
           cgpa: remoteProfile.cgpa.toString(),
           skills: remoteProfile.skills.join(", "),
-          profilePicture: remoteProfile.profilePicture ?? "",
         });
+        setCurrentProfilePicture(remoteProfile.profilePicture ?? "");
         setCertificates(remoteProfile.certificates ?? []);
         setHackathons(remoteProfile.hackathons ?? []);
         setSports(remoteProfile.sports ?? []);
@@ -124,7 +122,7 @@ const UpdateStudentProfile = () => {
       );
 
       const trimmedUid = formData.uid.trim();
-      let profilePictureUrl = formData.profilePicture.trim() || undefined;
+      let profilePictureUrl = currentProfilePicture || undefined;
 
       if (profileImageFile) {
         try {
@@ -133,6 +131,7 @@ const UpdateStudentProfile = () => {
             await deleteProfileImage(profile.profilePicture).catch(() => undefined);
           }
           profilePictureUrl = publicUrl;
+          setCurrentProfilePicture(publicUrl);
         } catch (error) {
           const message = error instanceof Error ? error.message : "Unable to upload profile image";
           toast({ title: "Upload failed", description: message, variant: "destructive" });
@@ -147,7 +146,6 @@ const UpdateStudentProfile = () => {
         email: formData.email.trim(),
         year: parseInt(formData.year, 10),
         branch: formData.branch.trim(),
-        major: formData.major.trim(),
         cgpa: parseFloat(formData.cgpa),
         skills: formData.skills.split(",").map(s => s.trim()).filter(Boolean),
         profilePicture: profilePictureUrl,
@@ -171,7 +169,6 @@ const UpdateStudentProfile = () => {
         internships: cleanInternships,
         extracurricular: cleanExtracurriculars,
       } as StudentProfile);
-      setFormData((prev) => ({ ...prev, profilePicture: profilePictureUrl ?? "" }));
       setProfileImageFile(null);
       setImagePreview(null);
       toast({
@@ -361,17 +358,6 @@ const UpdateStudentProfile = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="major">Major *</Label>
-                  <Input
-                    id="major"
-                    name="major"
-                    value={formData.major}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
                   <Label htmlFor="cgpa">CGPA *</Label>
                   <Input
                     id="cgpa"
@@ -390,27 +376,16 @@ const UpdateStudentProfile = () => {
                   <Label htmlFor="profileImageFile">Profile Picture</Label>
                   <Input id="profileImageFile" type="file" accept="image/*" onChange={handleProfileImageChange} />
                   <p className="text-xs text-muted-foreground">
-                    Uploading a new image replaces the previous one stored in Supabase.
+                    Uploading a new image replaces the previous one stored in Supabase; skip this to keep your current photo.
                   </p>
-                  {(imagePreview || formData.profilePicture) && (
+                  {(imagePreview || currentProfilePicture) && (
                     <img
-                      src={imagePreview || formData.profilePicture}
+                      src={imagePreview || currentProfilePicture}
                       alt="Profile preview"
                       className="w-24 h-24 rounded-full object-cover border border-border"
                     />
                   )}
                 </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="profilePicture">Profile Picture URL (optional)</Label>
-                <Input
-                  id="profilePicture"
-                  name="profilePicture"
-                  value={formData.profilePicture}
-                  onChange={handleChange}
-                  placeholder="https://..."
-                />
               </div>
 
               <div className="space-y-2">

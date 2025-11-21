@@ -25,10 +25,8 @@ const CreateStudentProfile = () => {
     email: user?.email || "",
     year: "",
     branch: "",
-    major: "",
     cgpa: "",
     skills: "",
-    profilePicture: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
@@ -91,7 +89,7 @@ const CreateStudentProfile = () => {
       return;
     }
 
-    let profilePictureUrl = formData.profilePicture.trim() || undefined;
+    let profilePictureUrl: string | undefined;
 
     if (profileImageFile) {
       try {
@@ -112,7 +110,6 @@ const CreateStudentProfile = () => {
       email: formData.email.trim(),
       year: parseInt(formData.year, 10),
       branch: formData.branch.trim(),
-      major: formData.major.trim(),
       cgpa: parseFloat(formData.cgpa),
       skills: formData.skills.split(",").map(s => s.trim()).filter(Boolean),
       profilePicture: profilePictureUrl,
@@ -333,17 +330,6 @@ const CreateStudentProfile = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="major">Major *</Label>
-                  <Input
-                    id="major"
-                    name="major"
-                    value={formData.major}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
                   <Label htmlFor="cgpa">CGPA *</Label>
                   <Input
                     id="cgpa"
@@ -362,27 +348,16 @@ const CreateStudentProfile = () => {
                   <Label htmlFor="profileImageFile">Profile Picture</Label>
                   <Input id="profileImageFile" type="file" accept="image/*" onChange={handleProfileImageChange} />
                   <p className="text-xs text-muted-foreground">
-                    Upload a square image (JPG or PNG). Existing URL input will be used if no file is selected.
+                    Upload a square image (JPG or PNG). You can skip this step if you want to add the photo later.
                   </p>
-                  {(imagePreview || formData.profilePicture) && (
+                  {imagePreview && (
                     <img
-                      src={imagePreview || formData.profilePicture}
+                      src={imagePreview}
                       alt="Profile preview"
                       className="w-24 h-24 rounded-full object-cover border border-border"
                     />
                   )}
                 </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="profilePicture">Profile Picture URL (optional)</Label>
-                <Input
-                  id="profilePicture"
-                  name="profilePicture"
-                  value={formData.profilePicture}
-                  onChange={handleChange}
-                  placeholder="https://..."
-                />
               </div>
 
               <div className="space-y-2">

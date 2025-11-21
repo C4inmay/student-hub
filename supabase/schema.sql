@@ -74,7 +74,6 @@ create table if not exists public.student_profiles (
   email         text not null,
   year          integer not null check (year between 1 and 4),
   branch        text not null,
-  major         text not null,
   cgpa          numeric(3,2) not null check (cgpa between 0 and 10),
   skills        text[] not null default '{}',
   profile_picture text,

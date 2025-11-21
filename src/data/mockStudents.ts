@@ -5,7 +5,6 @@ export interface Student {
   email: string;
   year: number;
   branch: string;
-  major: string;
   cgpa: number;
   skills: string[];
   profilePicture?: string;
@@ -29,7 +28,6 @@ export const mockStudents: Student[] = [
     email: "rahul.sharma@university.edu",
     year: 3,
     branch: "Computer Science",
-    major: "Software Engineering",
     cgpa: 9.2,
     skills: ["Python", "React", "Machine Learning", "Data Structures"],
     academicRank: 1,
@@ -64,7 +62,6 @@ export const mockStudents: Student[] = [
     email: "priya.patel@university.edu",
     year: 3,
     branch: "Computer Science",
-    major: "AI & Data Science",
     cgpa: 9.5,
     skills: ["TensorFlow", "PyTorch", "NLP", "Computer Vision"],
     academicRank: 2,
@@ -99,7 +96,6 @@ export const mockStudents: Student[] = [
     email: "arjun.kumar@university.edu",
     year: 2,
     branch: "Electronics",
-    major: "IoT Systems",
     cgpa: 8.8,
     skills: ["Arduino", "Raspberry Pi", "C++", "IoT Protocols"],
     academicRank: 5,
@@ -131,7 +127,6 @@ export const mockStudents: Student[] = [
     email: "sneha.reddy@university.edu",
     year: 4,
     branch: "Computer Science",
-    major: "Cybersecurity",
     cgpa: 9.0,
     skills: ["Network Security", "Penetration Testing", "Cryptography", "Ethical Hacking"],
     academicRank: 3,
@@ -162,7 +157,6 @@ export const mockStudents: Student[] = [
     email: "vikram.singh@university.edu",
     year: 3,
     branch: "Mechanical",
-    major: "Automotive Design",
     cgpa: 8.5,
     skills: ["CAD", "AutoCAD", "SolidWorks", "Finite Element Analysis"],
     academicRank: 8,
@@ -192,7 +186,6 @@ export const mockStudents: Student[] = [
     email: "ananya.iyer@university.edu",
     year: 2,
     branch: "Computer Science",
-    major: "Web Development",
     cgpa: 8.9,
     skills: ["React", "Node.js", "MongoDB", "TypeScript", "GraphQL"],
     academicRank: 4,

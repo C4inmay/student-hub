@@ -13,7 +13,6 @@ export interface StudentProfileRow {
   email: string;
   year: number;
   branch: string;
-  major: string;
   cgpa: number;
   skills: string[];
   profile_picture?: string | null;
@@ -35,7 +34,6 @@ const rowToProfile = (
   email: row.email,
   year: row.year,
   branch: row.branch,
-  major: row.major,
   cgpa: row.cgpa,
   skills: row.skills ?? [],
   profilePicture: row.profile_picture ?? undefined,
@@ -58,7 +56,6 @@ const profileToRow = (profile: StudentProfile): StudentProfileRow => ({
   email: profile.email,
   year: profile.year,
   branch: profile.branch,
-  major: profile.major,
   cgpa: profile.cgpa,
   skills: profile.skills,
   profile_picture: profile.profilePicture ?? null,
@@ -80,7 +77,6 @@ const profilePartialToRowPartial = (
   if (updates.email !== undefined) row.email = updates.email;
   if (updates.year !== undefined) row.year = updates.year;
   if (updates.branch !== undefined) row.branch = updates.branch;
-  if (updates.major !== undefined) row.major = updates.major;
   if (updates.cgpa !== undefined) row.cgpa = updates.cgpa;
   if (updates.skills !== undefined) row.skills = updates.skills;
   if (updates.profilePicture !== undefined) row.profile_picture = updates.profilePicture ?? null;

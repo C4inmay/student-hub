@@ -139,36 +139,35 @@ on conflict (uid) do update set
 
 -- Insert approved student profiles
 insert into public.student_profiles (
-  user_id, name, uid, email, year, branch, major, cgpa, skills, profile_picture,
+  user_id, name, uid, email, year, branch, cgpa, skills, profile_picture,
   verification_status, reviewed_at
 )
 values
-  ('seed-user-rahul', 'Rahul Sharma', 'STU2021001', 'rahul.sharma@university.edu', 3, 'Computer Science', 'Software Engineering', 9.2,
+  ('seed-user-rahul', 'Rahul Sharma', 'STU2021001', 'rahul.sharma@university.edu', 3, 'Computer Science', 9.2,
     ARRAY['Python','React','Machine Learning','Data Structures'], null, 'approved', now()),
-  ('seed-user-priya', 'Priya Patel', 'STU2021002', 'priya.patel@university.edu', 3, 'Computer Science', 'AI & Data Science', 9.5,
+  ('seed-user-priya', 'Priya Patel', 'STU2021002', 'priya.patel@university.edu', 3, 'Computer Science', 9.5,
     ARRAY['TensorFlow','PyTorch','NLP','Computer Vision'], null, 'approved', now()),
-  ('seed-user-arjun', 'Arjun Kumar', 'STU2021003', 'arjun.kumar@university.edu', 2, 'Electronics', 'IoT Systems', 8.8,
+  ('seed-user-arjun', 'Arjun Kumar', 'STU2021003', 'arjun.kumar@university.edu', 2, 'Electronics', 8.8,
     ARRAY['Arduino','Raspberry Pi','C++','IoT Protocols'], null, 'approved', now()),
-  ('seed-user-sneha', 'Sneha Reddy', 'STU2021004', 'sneha.reddy@university.edu', 4, 'Computer Science', 'Cybersecurity', 9.0,
+  ('seed-user-sneha', 'Sneha Reddy', 'STU2021004', 'sneha.reddy@university.edu', 4, 'Computer Science', 9.0,
     ARRAY['Network Security','Penetration Testing','Cryptography','Python'], null, 'approved', now()),
-  ('seed-user-vikram', 'Vikram Singh', 'STU2021005', 'vikram.singh@university.edu', 3, 'Mechanical', 'Automotive Design', 8.5,
+  ('seed-user-vikram', 'Vikram Singh', 'STU2021005', 'vikram.singh@university.edu', 3, 'Mechanical', 8.5,
     ARRAY['CAD','AutoCAD','SolidWorks','Finite Element Analysis'], null, 'approved', now()),
-  ('seed-user-ananya', 'Ananya Iyer', 'STU2021006', 'ananya.iyer@university.edu', 2, 'Computer Science', 'Web Development', 8.9,
+  ('seed-user-ananya', 'Ananya Iyer', 'STU2021006', 'ananya.iyer@university.edu', 2, 'Computer Science', 8.9,
     ARRAY['React','Node.js','TypeScript','GraphQL'], null, 'approved', now()),
-  ('seed-user-neha', 'Neha Kapoor', 'STU2021007', 'neha.kapoor@university.edu', 4, 'Information Technology', 'Data Analytics', 9.1,
+  ('seed-user-neha', 'Neha Kapoor', 'STU2021007', 'neha.kapoor@university.edu', 4, 'Information Technology', 9.1,
     ARRAY['SQL','PowerBI','Python','Data Storytelling'], null, 'approved', now()),
-  ('seed-user-karan', 'Karan Mehta', 'STU2021008', 'karan.mehta@university.edu', 3, 'Civil Engineering', 'Structural Design', 8.2,
+  ('seed-user-karan', 'Karan Mehta', 'STU2021008', 'karan.mehta@university.edu', 3, 'Civil Engineering', 8.2,
     ARRAY['AutoCAD','STAAD Pro','Project Planning','Surveying'], null, 'approved', now()),
-  ('seed-user-divya', 'Divya Nair', 'STU2021009', 'divya.nair@university.edu', 1, 'Computer Science', 'AI & Robotics', 9.3,
+  ('seed-user-divya', 'Divya Nair', 'STU2021009', 'divya.nair@university.edu', 1, 'Computer Science', 9.3,
     ARRAY['Python','Robotics','ROS','Computer Vision'], null, 'approved', now()),
-  ('seed-user-rohan', 'Rohan Das', 'STU2021010', 'rohan.das@university.edu', 2, 'Electronics', 'Embedded Systems', 8.7,
+  ('seed-user-rohan', 'Rohan Das', 'STU2021010', 'rohan.das@university.edu', 2, 'Electronics', 8.7,
     ARRAY['Embedded C','VHDL','PCB Design','Signal Processing'], null, 'approved', now())
 on conflict (uid) do update set
   name = excluded.name,
   email = excluded.email,
   year = excluded.year,
   branch = excluded.branch,
-  major = excluded.major,
   cgpa = excluded.cgpa,
   skills = excluded.skills,
   profile_picture = excluded.profile_picture,

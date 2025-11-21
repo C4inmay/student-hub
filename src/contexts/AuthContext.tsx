@@ -142,7 +142,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return { success: true };
     }
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
     if (error) {
       return { success: false, error: error.message };
     }
@@ -185,7 +185,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
 
     if (error) {
-      return { success: false, error: error.message };
+      const lowered = error.message.toLowerCase();
+      const isDuplicate = lowered.includes("already registered") || lowered.includes("invalid") || lowered.includes("exists");
+      return {
+        success: false,
+        error: isDuplicate
+          ? "Account already exists. Sign in instead."
+          : error.message,
+      };
     }
 
     return { success: true };

@@ -73,9 +73,17 @@ const StudentDirectory = () => {
           {filteredStudents.map((student) => (
             <Card key={student.id} className="p-6 hover:shadow-lg transition-shadow bg-card">
               <div className="flex flex-col items-center text-center">
-                <div className="w-24 h-24 rounded-full bg-accent flex items-center justify-center mb-4">
-                  <User className="h-12 w-12 text-accent-foreground" />
-                </div>
+                {student.profilePicture ? (
+                  <img
+                    src={student.profilePicture}
+                    alt={student.name}
+                    className="w-24 h-24 rounded-full object-cover border border-border mb-4"
+                  />
+                ) : (
+                  <div className="w-24 h-24 rounded-full bg-accent flex items-center justify-center mb-4">
+                    <User className="h-12 w-12 text-accent-foreground" />
+                  </div>
+                )}
                 
                 <h3 className="text-xl font-bold text-foreground mb-1">{student.name}</h3>
                 <p className="text-sm text-muted-foreground mb-3">{student.email}</p>

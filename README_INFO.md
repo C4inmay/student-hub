@@ -100,3 +100,4 @@ student-hub/
 3. **Database** structure defined in `supabase/schema.sql` ensures the client queries match available columns/constraints. Seeds & storage helpers keep demo data and profile images in sync.
 
 Having this quick-reference should make it easier to onboard new contributors or revisit parts of the project months later. Update this file whenever new major areas (pages, services, or schema changes) are added.
+

@@ -154,10 +154,6 @@ const StudentProfile = () => {
             </div>
             <div className="space-y-3">
               <div className="flex justify-between items-center p-3 bg-secondary rounded-lg">
-                <span className="font-medium text-foreground">Major</span>
-                <span className="text-muted-foreground">{profile.major}</span>
-              </div>
-              <div className="flex justify-between items-center p-3 bg-secondary rounded-lg">
                 <span className="font-medium text-foreground">CGPA</span>
                 <Badge className="font-bold">{profile.cgpa}</Badge>
               </div>
